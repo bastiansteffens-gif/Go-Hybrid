@@ -198,7 +198,17 @@ def actions_watch(run_id=None):
 
 
 def actions_fetch(run_id, jobdir):
-    arts = gh_api("/repos/limitlessprojects/Go-Hybrid/actions/runs/{}/artifacts".format(run_id))["artifacts"]
+    # The endpoint defaults to only 30 artifacts. Fetch every page so larger
+    # shard fleets do not silently lose their remaining results.
+    arts, page = [], 1
+    while True:
+        batch = gh_api(
+            "/repos/limitlessprojects/Go-Hybrid/actions/runs/{}/artifacts?per_page=100&page={}".format(run_id, page)
+        )["artifacts"]
+        arts.extend(batch)
+        if len(batch) < 100:
+            break
+        page += 1
     os.makedirs(os.path.join(jobdir, "result"), exist_ok=True)
     tok = gh_token()
     for a in arts:
